@@ -1,1 +1,1 @@
-Walclick_Client
+Walclick_Photographer

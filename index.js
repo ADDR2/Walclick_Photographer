@@ -15,41 +15,24 @@ app.use(bodyParser.json());
 
 app.use(express.static(publicPath));
 
-const createMainConnection = () => {
+const createMainConnection = eventName => {
     return new Promise((resolve, reject) => {
-        const serverSocket = socketClient.connect('http://192.168.0.8:5000');
-        serverSocket.on('connect', () => serverSocket.emit('Photographer') && resolve(serverSocket));
-        setTimeout(() => reject('Not able to connect to backend'), 5000);
+        const serverSocket = socketClient.connect('http://localhost:5000');
+        serverSocket.on('connect', () => serverSocket.emit(eventName || 'Photographer') && resolve(serverSocket));
+        setTimeout(reject, 5000, 'Not able to connect to backend');
     });
 };
 
-const createCoordsEvent = (socket,  serverSocket) => {
-    socket.on('coords', data => {
-        serverSocket.emit('coords', data);
-    });
-
-    socket.on('arrived', data => {
-        serverSocket.emit('arrived', data);
-
-        serverSocket.disconnect();
-        socket.disconnect();
-    });
-};
-
-require('./frontConnections')(socketIO(server), createMainConnection, createCoordsEvent);
+createMainConnection('PermanentPhotographer')
+    .then( require('./frontConnections').bind(this, socketIO(server), createMainConnection) )
+    .catch( error => (console.log(error), process.exit(1)) );
 
 app.post('/create', async (req, res) => {
     try {
         const serverSocket = await createMainConnection();
-        serverSocket.emit('createPhotographer', req.body);
-
-        serverSocket.on('response', result => {
-            res.status(201).send(result);
-            serverSocket.disconnect();
-        });
-
-        serverSocket.on('actionError', error => {
-            res.status(500).send(error);
+        serverSocket.emit('createPhotographer', req.body, (result, error) => {
+            if(error) res.status(400).send(error);
+            else res.status(201).send(result);
             serverSocket.disconnect();
         });
     } catch(error) {
