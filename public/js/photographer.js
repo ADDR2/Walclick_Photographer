@@ -1,19 +1,36 @@
-var socket = io();
+function connect() {
+    var socket = io();
 
-socket.on('connect', function() {
-    console.log("I'm connected");
-});
+    socket.on('connect', function() {
+        console.log("I'm connected");
+    });
 
-socket.on('disconnect', function() {
-    console.log('Disconnected from server');
-});
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+    });
 
-socket.on('arrived', function() {
-    alert('arrived');
-    serverSocket.disconnect();
-});
+    socket.on('actionError', function(error) {
+        alert(error);
+    });
+
+    socket.on('clientLooking', function(clientUsername) {
+        var result = confirm("Hey buddy, it seems " +clientUsername + " wants something from you. Are you taking the job?");
+        socket.emit('confirmJob', {
+            result: result || undefined,
+            error: !result && 'Photographer does not want the job'
+        });
+    });
+
+    socket.on('arrived', function() {
+        alert('arrived');
+        serverSocket.disconnect();
+    });
+
+    return socket;
+}
 
 function findClient() {
+    var socket = connect();
     if (!("geolocation" in navigator)) {
         return alert('Geolocation not supported by your browser.');
     }
@@ -36,4 +53,8 @@ function findClient() {
             alert('Unable to fetch location.');
         }
     );
+}
+
+function disconnect(socket) {
+    return socket.disconnect();
 }
